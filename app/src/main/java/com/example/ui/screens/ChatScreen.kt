@@ -167,7 +167,8 @@ fun ChatScreen(
         if (isPcToolbarEnabled) {
             PcKeyboardToolbar(
                 currentText = chatInput,
-                onTextChange = { viewModel.updateChatInput(it) }
+                onTextChange = { viewModel.updateChatInput(it) },
+                onShortcutTriggered = { viewModel.handleChatShortcut(it) }
             )
         }
 
@@ -202,7 +203,32 @@ fun ChatScreen(
                         .testTag("chat_input_field")
                         .onPreviewKeyEvent { event ->
                             if (event.type == KeyEventType.KeyDown) {
-                                if (event.key == Key.Enter && (event.isCtrlPressed || !event.isCtrlPressed)) {
+                                if (event.isCtrlPressed) {
+                                    when (event.key) {
+                                        Key.A -> {
+                                            viewModel.handleChatShortcut("SELECT_ALL")
+                                            return@onPreviewKeyEvent true
+                                        }
+                                        Key.C -> {
+                                            viewModel.handleChatShortcut("COPY")
+                                            return@onPreviewKeyEvent true
+                                        }
+                                        Key.V -> {
+                                            viewModel.handleChatShortcut("PASTE")
+                                            return@onPreviewKeyEvent true
+                                        }
+                                        Key.X -> {
+                                            viewModel.handleChatShortcut("CUT")
+                                            return@onPreviewKeyEvent true
+                                        }
+                                        Key.Enter -> {
+                                            if (chatInput.isNotBlank() && !isLoading) {
+                                                viewModel.sendChatMessage()
+                                                return@onPreviewKeyEvent true
+                                            }
+                                        }
+                                    }
+                                } else if (event.key == Key.Enter) {
                                     if (chatInput.isNotBlank() && !isLoading) {
                                         viewModel.sendChatMessage()
                                         return@onPreviewKeyEvent true

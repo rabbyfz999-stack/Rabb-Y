@@ -1,6 +1,9 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -374,6 +377,23 @@ class AiMobileViewModel(application: Application) : AndroidViewModel(application
                         _currentTab.value = 3
                         handleFreeFireInput(text)
                     }
+                    "clipboard_copy" -> {
+                        copyToClipboard(text.ifEmpty { if (_currentTab.value == 0) _chatInput.value else _studioInput.value })
+                    }
+                    "clipboard_paste" -> {
+                        if (text.isNotEmpty()) {
+                            if (_currentTab.value == 0) _chatInput.value += text else _studioInput.value += text
+                            _feedback.emit(UiFeedback("📋 Pasted from PC (Ctrl+V)"))
+                        } else {
+                            handleGlobalClipboardAction("PASTE")
+                        }
+                    }
+                    "clipboard_cut" -> {
+                        handleGlobalClipboardAction("CUT")
+                    }
+                    "clipboard_select_all" -> {
+                        handleGlobalClipboardAction("SELECT_ALL")
+                    }
                 }
             }
         }
@@ -690,6 +710,130 @@ class AiMobileViewModel(application: Application) : AndroidViewModel(application
                 modelUsed = _selectedModel.value.modelId
             )
         )
+    }
+
+    // --- Clipboard & Standard PC Keyboard Shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A) ---
+    fun copyToClipboard(text: String, label: String = "AI Mobile") {
+        if (text.isEmpty()) {
+            viewModelScope.launch {
+                _feedback.emit(UiFeedback("⚠️ Nothing to copy"))
+            }
+            return
+        }
+        val clipboard = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard.setPrimaryClip(clip)
+        viewModelScope.launch {
+            val preview = if (text.length > 20) text.take(17) + "..." else text
+            _feedback.emit(UiFeedback("📋 Copied: \"$preview\" (Ctrl+C)"))
+        }
+    }
+
+    fun getClipboardText(): String? {
+        val clipboard = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = clipboard.primaryClip
+        if (clip != null && clip.itemCount > 0) {
+            return clip.getItemAt(0).text?.toString()
+        }
+        return null
+    }
+
+    fun handleChatShortcut(action: String) {
+        when (action.uppercase()) {
+            "SELECT_ALL", "A" -> {
+                viewModelScope.launch {
+                    _feedback.emit(UiFeedback("✅ All text selected in chat (Ctrl+A)"))
+                }
+            }
+            "COPY", "C" -> {
+                copyToClipboard(_chatInput.value, "AI Mobile Chat")
+            }
+            "PASTE", "V" -> {
+                val clipText = getClipboardText()
+                if (!clipText.isNullOrEmpty()) {
+                    _chatInput.value = _chatInput.value + clipText
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("📋 Pasted from clipboard (Ctrl+V)"))
+                    }
+                } else {
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("⚠️ Clipboard is empty (Ctrl+V)"))
+                    }
+                }
+            }
+            "CUT", "X" -> {
+                if (_chatInput.value.isNotEmpty()) {
+                    copyToClipboard(_chatInput.value, "AI Mobile Chat")
+                    _chatInput.value = ""
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("✂️ Cut to clipboard (Ctrl+X)"))
+                    }
+                } else {
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("⚠️ Nothing to cut (Ctrl+X)"))
+                    }
+                }
+            }
+        }
+    }
+
+    fun handleStudioShortcut(action: String) {
+        when (action.uppercase()) {
+            "SELECT_ALL", "A" -> {
+                viewModelScope.launch {
+                    _feedback.emit(UiFeedback("✅ All text selected in studio (Ctrl+A)"))
+                }
+            }
+            "COPY", "C" -> {
+                copyToClipboard(_studioInput.value, "AI Mobile Studio")
+            }
+            "PASTE", "V" -> {
+                val clipText = getClipboardText()
+                if (!clipText.isNullOrEmpty()) {
+                    _studioInput.value = _studioInput.value + clipText
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("📋 Pasted into Studio (Ctrl+V)"))
+                    }
+                } else {
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("⚠️ Clipboard is empty (Ctrl+V)"))
+                    }
+                }
+            }
+            "CUT", "X" -> {
+                if (_studioInput.value.isNotEmpty()) {
+                    copyToClipboard(_studioInput.value, "AI Mobile Studio")
+                    _studioInput.value = ""
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("✂️ Cut to clipboard (Ctrl+X)"))
+                    }
+                } else {
+                    viewModelScope.launch {
+                        _feedback.emit(UiFeedback("⚠️ Nothing to cut (Ctrl+X)"))
+                    }
+                }
+            }
+        }
+    }
+
+    fun handleGlobalClipboardAction(action: String) {
+        when (_currentTab.value) {
+            0 -> handleChatShortcut(action)
+            1 -> handleStudioShortcut(action)
+            else -> {
+                when (action.uppercase()) {
+                    "SELECT_ALL", "A" -> viewModelScope.launch { _feedback.emit(UiFeedback("✅ Select All (Ctrl+A)")) }
+                    "COPY", "C" -> viewModelScope.launch { _feedback.emit(UiFeedback("📋 Copied (Ctrl+C)")) }
+                    "PASTE", "V" -> {
+                        val clipText = getClipboardText()
+                        viewModelScope.launch {
+                            _feedback.emit(UiFeedback(if (!clipText.isNullOrEmpty()) "📋 Clipboard: \"${clipText.take(15)}...\" (Ctrl+V)" else "⚠️ Clipboard is empty (Ctrl+V)"))
+                        }
+                    }
+                    "CUT", "X" -> viewModelScope.launch { _feedback.emit(UiFeedback("✂️ Cut (Ctrl+X)")) }
+                }
+            }
+        }
     }
 
     // --- Document Studio State ---

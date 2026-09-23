@@ -134,6 +134,12 @@ class PcKeyboardServer(
                     onTextReceived(text, "studio")
                     sendJsonResponse(writer, """{"status":"ok","type":"sent_studio"}""")
                 }
+                path == "/api/clipboard" && method == "POST" -> {
+                    val action = parseParam(body, "action")
+                    val text = parseParam(body, "text")
+                    onTextReceived(text, "clipboard_$action")
+                    sendJsonResponse(writer, """{"status":"ok","action":"$action"}""")
+                }
                 path == "/api/free_fire" && method == "POST" -> {
                     val key = parseParam(body, "key").ifEmpty { parseParam(body, "text") }
                     onTextReceived(key, "free_fire")

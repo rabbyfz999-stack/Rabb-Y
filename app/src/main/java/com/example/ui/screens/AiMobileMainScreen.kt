@@ -129,6 +129,10 @@ fun AiMobileMainScreen(
                 if (event.type == KeyEventType.KeyDown) {
                     if (event.isCtrlPressed) {
                         when (event.key) {
+                            Key.A -> { viewModel.handleGlobalClipboardAction("SELECT_ALL"); true }
+                            Key.C -> { viewModel.handleGlobalClipboardAction("COPY"); true }
+                            Key.V -> { viewModel.handleGlobalClipboardAction("PASTE"); true }
+                            Key.X -> { viewModel.handleGlobalClipboardAction("CUT"); true }
                             Key.One -> { viewModel.setCurrentTab(0); true }
                             Key.Two -> { viewModel.setCurrentTab(1); true }
                             Key.Three -> { viewModel.setCurrentTab(2); true }

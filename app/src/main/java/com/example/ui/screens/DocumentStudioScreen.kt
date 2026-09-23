@@ -55,6 +55,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -183,6 +189,7 @@ fun DocumentStudioScreen(
                 PcKeyboardToolbar(
                     currentText = input,
                     onTextChange = { viewModel.updateStudioInput(it) },
+                    onShortcutTriggered = { viewModel.handleStudioShortcut(it) },
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
 
@@ -198,7 +205,30 @@ fun DocumentStudioScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(130.dp)
-                        .testTag("studio_input_field"),
+                        .testTag("studio_input_field")
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown && event.isCtrlPressed) {
+                                when (event.key) {
+                                    Key.A -> {
+                                        viewModel.handleStudioShortcut("SELECT_ALL")
+                                        true
+                                    }
+                                    Key.C -> {
+                                        viewModel.handleStudioShortcut("COPY")
+                                        true
+                                    }
+                                    Key.V -> {
+                                        viewModel.handleStudioShortcut("PASTE")
+                                        true
+                                    }
+                                    Key.X -> {
+                                        viewModel.handleStudioShortcut("CUT")
+                                        true
+                                    }
+                                    else -> false
+                                }
+                            } else false
+                        },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
