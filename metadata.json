@@ -1,0 +1,6 @@
+{
+  "name": "AI Mobile",
+  "description": "AI Mobile device with 8GB RAM, 128GB Storage, PC keyboard bridge, and Gemini intelligence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
